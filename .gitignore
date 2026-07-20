@@ -6,6 +6,8 @@ __pycache__/
 .DS_Store
 data/*
 !data/.gitkeep
+!data/stations.csv
+!data/warnings_matched.csv
 *.env
 .env
 models/*.pkl
