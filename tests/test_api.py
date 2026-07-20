@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 
-client = TestClient(app)
+client = TestClient(app, raise_server_exceptions=False)
 FIXTURE = json.loads((Path(__file__).parent / "fixtures" / "ea_readings_sample.json").read_text())
 
 
