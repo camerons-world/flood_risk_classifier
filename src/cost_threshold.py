@@ -1,12 +1,24 @@
 """Cost-based operating threshold selection.
 
 The label is per station-hour ("a warning will fire within the next 24h"),
-so a single real flood event shows up as a run of consecutive positive rows
--- not one row. Costing a missed warning per row would charge the same
-event's cost once for every hour in that run (up to ~24x overstatement).
-Instead: a missed *event* (a contiguous run of label==1 for a station) costs
-once, however many rows it spans; a false alarm costs once per row, since
-each spurious flag really does waste someone's time separately.
+so both a real flood event and a sustained false alarm show up as a *run* of
+consecutive rows, not a single row. Costing either per row would charge the
+same event/false-signal cost once for every hour it spans -- overstating
+both sides by however many hours the run happens to cover. Instead, both
+sides are costed per contiguous episode:
+- A missed event (a run of label==1 for a station with no flagged row in it)
+  costs once, however many rows it spans. These are naturally bounded to
+  <=24 rows by how the label itself is constructed (assemble_dataset.py), so
+  no separate cap is needed here.
+- A false alarm (a run of flagged==True for a station that never overlaps a
+  real label==1 row) also costs once per FALSE_ALARM_MAX_HOURS block, not
+  once per run -- a run has no natural bound the way a label run does. An
+  uncapped version of this was tried and gamed by a model that, once given
+  station_id as a feature, just stayed flagged for one station across nearly
+  the entire test period (one run of ~18,000 hours) for a single GBP 100
+  charge, which is not how alert fatigue actually works. Capping at 24h
+  forces a persistently-wrong station to keep incurring cost, using the same
+  natural time unit as the label's own lookback window.
 
 Cost values (see README for the full writeup):
 - COST_MISSED_WARNING: ABI's reported 2025 average UK domestic flood claim
@@ -20,35 +32,44 @@ import pandas as pd
 
 COST_MISSED_WARNING = 30_000
 COST_FALSE_ALARM = 100
+FALSE_ALARM_MAX_HOURS = 24
 
 
-def _episode_ids(df: pd.DataFrame) -> pd.Series:
-    """Contiguous run of label==1 within a station -> one episode id; label==0 rows get NaN."""
-    df = df.sort_values(["station_id", "date_time"])
-    is_positive = df["label"] == 1
+def _contiguous_run_ids(df: pd.DataFrame, flag_col: str, max_run_length: int | None = None) -> pd.Series:
+    """Contiguous True run of flag_col within a station -> one run id; False rows get NaN.
+    With max_run_length set, a run longer than that gets split into successive sub-runs."""
+    is_true = df[flag_col]
     same_station = df["station_id"] == df["station_id"].shift(1)
-    starts_new_episode = is_positive & ~(is_positive.shift(1, fill_value=False) & same_station)
-    episode_id = starts_new_episode.cumsum()
-    return episode_id.where(is_positive)
+    starts_new_run = is_true & ~(is_true.shift(1, fill_value=False) & same_station)
+    run_id = starts_new_run.cumsum()
+    run_id = run_id.where(is_true)
+
+    if max_run_length is not None:
+        position_in_run = df.groupby(run_id)[flag_col].cumcount()
+        run_id = run_id * 1_000_000 + (position_in_run // max_run_length)
+
+    return run_id
 
 
 def expected_cost(df: pd.DataFrame, proba_col: str, threshold: float) -> float:
-    """df needs columns: station_id, date_time, label, and `proba_col`."""
+    """df needs columns: station_id, date_time, label, and `proba_col`. Must already be
+    sorted by (station_id, date_time) -- callers should sort once rather than per threshold."""
     df = df.copy()
-    df["episode_id"] = _episode_ids(df)
-    flagged = df[proba_col] >= threshold
+    df["flagged"] = df[proba_col] >= threshold
 
-    false_alarm_count = ((df["label"] == 0) & flagged).sum()
+    event_run_id = _contiguous_run_ids(df.assign(is_label=df["label"].astype(bool)), "is_label")
+    event_flagged = df.loc[event_run_id.notna()].groupby(event_run_id[event_run_id.notna()])["flagged"].any()
+    missed_event_count = (~event_flagged).sum()
 
-    episode_flagged = df.loc[df["episode_id"].notna()].groupby("episode_id").apply(
-        lambda g: flagged.loc[g.index].any(), include_groups=False
-    )
-    missed_event_count = (~episode_flagged).sum()
+    alarm_run_id = _contiguous_run_ids(df, "flagged", max_run_length=FALSE_ALARM_MAX_HOURS)
+    alarm_has_true_positive = df.loc[alarm_run_id.notna()].groupby(alarm_run_id[alarm_run_id.notna()])["label"].max()
+    false_alarm_count = (alarm_has_true_positive == 0).sum()
 
     return missed_event_count * COST_MISSED_WARNING + false_alarm_count * COST_FALSE_ALARM
 
 
 def select_threshold(df: pd.DataFrame, proba_col: str, thresholds=None) -> dict:
+    df = df.sort_values(["station_id", "date_time"]).reset_index(drop=True)
     if thresholds is None:
         thresholds = np.linspace(0.01, 0.99, 99)
     curve = pd.DataFrame(
