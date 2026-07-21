@@ -12,4 +12,4 @@ COPY data/stations.csv data/stations.csv
 COPY data/station_baselines.csv data/station_baselines.csv
 
 EXPOSE 7860
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-7860}"]

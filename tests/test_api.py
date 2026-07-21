@@ -6,9 +6,10 @@ import requests
 from fastapi.testclient import TestClient
 
 from app import ea_client
-from app.main import app
+from app.main import BASIC_AUTH_PASSWORD, BASIC_AUTH_USERNAME, app
 
 client = TestClient(app, raise_server_exceptions=False)
+client.auth = (BASIC_AUTH_USERNAME, BASIC_AUTH_PASSWORD)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 STATION_ID = "2893TH"
@@ -83,3 +84,15 @@ def test_predict_hard_error_when_no_cache_to_fall_back_on(requests_mock):
     requests_mock.get(f"{BASE_URL}/id/stations/{STATION_ID}", exc=requests.exceptions.ConnectTimeout)
     response = client.get("/predict", params={"station_id": STATION_ID})
     assert response.status_code == 502
+
+
+def test_predict_requires_auth():
+    unauthenticated = TestClient(app, raise_server_exceptions=False)
+    response = unauthenticated.get("/predict", params={"station_id": STATION_ID})
+    assert response.status_code == 401
+
+
+def test_health_does_not_require_auth():
+    unauthenticated = TestClient(app, raise_server_exceptions=False)
+    response = unauthenticated.get("/health")
+    assert response.status_code == 200
