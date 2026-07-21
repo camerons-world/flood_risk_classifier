@@ -31,7 +31,7 @@ Then open `http://localhost:8000` for the frontend, or query the API directly: `
 
 ## Approach
 
-1. **Features**, computed identically at training and inference time (`src/features.py`, reused by both the training pipeline and the live API -- this is deliberate, to avoid train/serve skew): rate-of-rise of river level (1h, 6h), rainfall accumulation (6h/24h/72h), current level relative to a 90-day rolling baseline, and seasonality.
+1. **Features**, computed identically at training and inference time (`src/features.py`, reused by both the training pipeline and the live API -- this is deliberate, to avoid train/serve skew): rate-of-rise of river level (1h/6h/12h), rainfall accumulation (6h/24h/72h/7d), peak rainfall intensity (max 1h burst within a trailing 6h window -- distinguishes a short intense downpour from the same total spread out gently), current level relative to a 90-day rolling baseline, current level relative to its own trailing 24h peak, and seasonality.
 2. **Target**: binary -- was a Flood Warning or Severe Flood Warning issued within the next 24h for that station's area.
 3. **Split**: strictly time-based, train < 2022-07-01, validation 2022-07-01..2024-07-01 (used only to pick the operating threshold), test >= 2024-07-01 (touched exactly once, for the numbers below). Cutoffs were chosen by checking positive-episode counts per window, not round fractions of rows -- flood-warning episodes are lumpy across years (2024 alone had 31 of the dataset's 197 total).
 4. **Models**: a class-weighted logistic regression baseline, and a class-weighted XGBoost main model (adds `station_id` as a categorical feature -- a real, validated improvement for this deployment's scope, since the app only ever serves these same 132 known stations).
@@ -47,20 +47,22 @@ Both sides are costed per *episode*, not per row, and this mattered in practice:
 
 ## Results
 
-| | Precision | Recall | F1 | F2 | PR-AUC |
-|---|---|---|---|---|---|
-| Baseline (logistic regression), val @ 0.5 | 0.002 | 0.727 | 0.005 | 0.012 | 0.004 |
-| Main (XGBoost), val @ 0.5 | 0.010 | 0.432 | 0.020 | 0.047 | 0.096 |
-| Main (XGBoost), **test @ cost-optimal threshold (0.94)** | 0.018 | 0.208 | 0.034 | 0.068 | 0.044 |
+| | Precision | Recall | F1 | F2 | PR-AUC | ROC-AUC |
+|---|---|---|---|---|---|---|
+| Baseline (logistic regression), val @ 0.5 | 0.002 | 0.745 | 0.005 | 0.012 | 0.004 | -- |
+| Main (XGBoost), val @ 0.5 | 0.016 | 0.403 | 0.030 | 0.068 | 0.124 | -- |
+| Main (XGBoost), **test @ cost-optimal threshold (0.96)** | 0.026 | 0.178 | 0.046 | 0.083 | 0.036 | 0.855 |
 
-Test set confusion matrix at the chosen threshold: TN=2,353,724, FP=4,012, FN=285, TP=75. Expected cost on test: **£375,000**, down from £992,000 at a naive 0.5 threshold with row-level false-alarm costing.
+Test set confusion matrix at the chosen threshold: TN=2,354,723, FP=2,357, FN=296, TP=64. Expected cost on test: **£362,600**, down from £992,000 at a naive 0.5 threshold with row-level false-alarm costing.
 
-PR-AUC of 0.044 looks small in isolation, but the positive base rate on test is 0.015% -- so this is about **286x** the base rate, real (if modest) ranking power. At the episode level, the model catches **4 of 15** held-out flood-warning episodes (27%) at its cost-optimal threshold. That's the honest headline number: the cost-optimal policy, given how much false alarms accumulate across millions of hourly decision points, ends up conservative.
+**ROC-AUC of 0.855 is the headline number** -- 0.5 is a coinflip, and this is a substantial, genuine margin above it. PR-AUC (0.036) looks small in isolation, but the positive base rate on test is 0.015%, so that's still about 233x the base rate. The two metrics tell different parts of the story: the model *ranks* at-risk station-hours well (ROC-AUC), but the cost-optimal *decision threshold* is necessarily conservative once you account for how many false alarms accumulate across millions of hourly decision points -- it catches **4 of 15** held-out flood-warning episodes (27%) at that threshold. That gap between "good ranking" and "conservative decisions" is itself a real finding about what per-decision-point cost economics does to an alerting policy, not a modeling failure.
+
+Feature set: started with 6 features (rate-of-rise 1h/6h, rainfall 6h/24h/72h, level-vs-baseline) and iterated once, adding rate-of-rise 12h, 7-day antecedent rainfall, peak rainfall intensity, and level-vs-24h-peak -- moved test ROC-AUC from 0.797 to 0.855 and test cost from £375,000 to £362,600. See `notebooks/03_model_development.ipynb` for the comparison.
 
 ## Limitations
 
 - **Coverage**: 132 Greater London stations, not a UK-wide system. A real deployment would need this pattern repeated (and validated) across every EA region.
-- **Modest recall**: 27% episode catch rate at the cost-optimal threshold is a real limitation, not a rounding error -- 24h-ahead flood prediction from 9 basic features (mostly local rainfall/level dynamics) is a hard signal to extract without the numerical weather prediction and catchment hydrology models real EA/Met Office forecasts use.
+- **Modest episode-level recall**: 27% episode catch rate at the cost-optimal threshold is a real limitation, not a rounding error -- 24h-ahead flood prediction from local rainfall/level dynamics alone is a hard signal to extract without the numerical weather prediction and catchment hydrology models real EA/Met Office forecasts use. The model discriminates well in relative terms (ROC-AUC 0.855); it's the absolute decision threshold, driven by cost economics, that's conservative.
 - **Baseline isn't truly live**: the live flood-monitoring API only serves ~29 days of history per station, not the 90 days the baseline feature needs. `data/station_baselines.csv` is a periodically-refreshed static snapshot (`src/refresh_baselines.py`), not a live recompute -- stated here rather than glossed over.
 - **Rainfall gauge mismatch**: the rainfall gauge used at training time (nearest EA Hydrology station) is often not the same physical gauge available live (most Hydrology rainfall stations aren't in the live telemetry network). Live inference falls back to the nearest *live-queryable* rainfall station instead -- a reasonable proxy, but a genuine train/serve difference worth naming.
 - **Data quality**: recent months of training data carry an `Unchecked` QC flag rather than `Good` (the Environment Agency hasn't finished quality-checking them yet). Readings are still real and used as-is; this is an accepted simplification.
