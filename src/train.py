@@ -13,6 +13,7 @@ train < 2022-07-01 (148 episodes), val 2022-07-01..2024-07-01 (34 episodes,
 picks the threshold), test >= 2024-07-01 (15 episodes, final numbers only).
 """
 import pandas as pd
+from xgboost import XGBClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score, confusion_matrix, fbeta_score, precision_score, recall_score
 from sklearn.pipeline import Pipeline
@@ -56,6 +57,26 @@ def train_baseline_model(train: pd.DataFrame) -> Pipeline:
     return model
 
 
+def train_main_model(train: pd.DataFrame, val: pd.DataFrame) -> XGBClassifier:
+    neg, pos = (train[TARGET_COLUMN] == 0).sum(), (train[TARGET_COLUMN] == 1).sum()
+    model = XGBClassifier(
+        tree_method="hist",
+        n_estimators=300,
+        max_depth=5,
+        learning_rate=0.1,
+        scale_pos_weight=neg / pos,
+        eval_metric="aucpr",
+        early_stopping_rounds=20,
+    )
+    model.fit(
+        train[FEATURE_COLUMNS],
+        train[TARGET_COLUMN],
+        eval_set=[(val[FEATURE_COLUMNS], val[TARGET_COLUMN])],
+        verbose=False,
+    )
+    return model
+
+
 def evaluate(model, split: pd.DataFrame, threshold: float = 0.5, label: str = "") -> dict:
     y_true = split[TARGET_COLUMN]
     proba = model.predict_proba(split[FEATURE_COLUMNS])[:, 1]
@@ -85,3 +106,6 @@ if __name__ == "__main__":
 
     baseline = train_baseline_model(train)
     evaluate(baseline, val, label="baseline logistic regression (validation)")
+
+    main_model = train_main_model(train, val)
+    evaluate(main_model, val, label="main XGBoost model (validation)")
