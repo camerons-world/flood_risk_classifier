@@ -49,6 +49,9 @@
   .effect-up { color: #9c1c14; font-weight: 600; }
   .effect-down { color: #146c2e; font-weight: 600; }
   .factors-note { font-size: 0.8rem; color: #767676; margin-top: 0.5rem; }
+  .view-toggle { font-size: 0.85rem; margin-top: 0.75rem; display: flex; align-items: center; gap: 0.4rem; }
+  .view-toggle label { cursor: pointer; }
+  code { font-size: 0.85rem; }
 </style>
 </head>
 <body>
@@ -64,6 +67,8 @@
     const select = document.getElementById("station-select");
     const button = document.getElementById("check-btn");
     const result = document.getElementById("result");
+    let lastResult = null;
+    let technicalView = false;
 
     async function loadStations() {
       const stations = await (await fetch("/stations")).json();
@@ -86,6 +91,7 @@
           result.innerHTML = `<p class="error">${body.detail || "Request failed"}</p>`;
           return;
         }
+        lastResult = body;
         render(body);
       } catch (err) {
         result.innerHTML = `<p class="error">Could not reach the API.</p>`;
@@ -94,12 +100,13 @@
       }
     }
 
-    function render(body) {
-      const pct = (body.risk_score * 100).toFixed(1);
-      const badgeClass = body.elevated_risk ? "risk-elevated" : "risk-normal";
-      const badgeText = body.elevated_risk ? "Elevated risk" : "Normal";
-
-      const rows = body.explanation
+    function factorRows(explanation) {
+      if (technicalView) {
+        return explanation
+          .map(f => `<tr><td><code>${f.feature}</code></td><td>${f.shap_contribution.toFixed(3)}</td></tr>`)
+          .join("");
+      }
+      return explanation
         .map(f => {
           const up = f.shap_contribution > 0;
           const arrow = up ? "&uarr;" : "&darr;";
@@ -107,17 +114,34 @@
           return `<tr><td>${f.label}</td><td>${f.value}</td><td class="${effectClass}">${arrow} ${f.direction}</td></tr>`;
         })
         .join("");
+    }
+
+    function render(body) {
+      const pct = (body.risk_score * 100).toFixed(1);
+      const badgeClass = body.elevated_risk ? "risk-elevated" : "risk-normal";
+      const badgeText = body.elevated_risk ? "Elevated risk" : "Normal";
+      const headerRow = technicalView
+        ? "<tr><th>Feature</th><th>SHAP contribution</th></tr>"
+        : "<tr><th>Factor</th><th>Reading</th><th>Effect on risk</th></tr>";
 
       result.innerHTML = `
         <p><span class="risk-badge ${badgeClass}">${badgeText}</span> risk score: <strong>${pct}%</strong></p>
         <p class="muted">Flags as elevated above ${(body.threshold * 100).toFixed(1)}% &middot; readings as of ${body.as_of}</p>
         ${body.stale ? '<div class="stale-banner">Live EA data unavailable -- showing last known readings.</div>' : ""}
         <table>
-          <thead><tr><th>Factor</th><th>Reading</th><th>Effect on risk</th></tr></thead>
-          <tbody>${rows}</tbody>
+          <thead>${headerRow}</thead>
+          <tbody>${factorRows(body.explanation)}</tbody>
         </table>
         <p class="factors-note">Biggest drivers of this score, most important first.</p>
+        <div class="view-toggle">
+          <input type="checkbox" id="technical-toggle" ${technicalView ? "checked" : ""}>
+          <label for="technical-toggle">Show technical details (raw feature names + SHAP values)</label>
+        </div>
       `;
+      document.getElementById("technical-toggle").addEventListener("change", (e) => {
+        technicalView = e.target.checked;
+        render(lastResult);
+      });
     }
 
     button.addEventListener("click", checkRisk);
