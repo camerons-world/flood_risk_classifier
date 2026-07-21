@@ -46,6 +46,9 @@
   th, td { text-align: left; padding: 0.35rem 0.5rem; border-bottom: 1px solid #ddd; font-size: 0.9rem; }
   .muted { color: #767676; font-size: 0.85rem; }
   .error { color: #9c1c14; }
+  .effect-up { color: #9c1c14; font-weight: 600; }
+  .effect-down { color: #146c2e; font-weight: 600; }
+  .factors-note { font-size: 0.8rem; color: #767676; margin-top: 0.5rem; }
 </style>
 </head>
 <body>
@@ -97,17 +100,23 @@
       const badgeText = body.elevated_risk ? "Elevated risk" : "Normal";
 
       const rows = body.explanation
-        .map(f => `<tr><td>${f.feature}</td><td>${typeof f.value === "number" ? f.value.toFixed(3) : f.value}</td><td>${f.shap_contribution.toFixed(3)}</td></tr>`)
+        .map(f => {
+          const up = f.shap_contribution > 0;
+          const arrow = up ? "&uarr;" : "&darr;";
+          const effectClass = up ? "effect-up" : "effect-down";
+          return `<tr><td>${f.label}</td><td>${f.value}</td><td class="${effectClass}">${arrow} ${f.direction}</td></tr>`;
+        })
         .join("");
 
       result.innerHTML = `
         <p><span class="risk-badge ${badgeClass}">${badgeText}</span> risk score: <strong>${pct}%</strong></p>
-        <p class="muted">Threshold: ${(body.threshold * 100).toFixed(1)}% &middot; readings as of ${body.as_of}</p>
+        <p class="muted">Flags as elevated above ${(body.threshold * 100).toFixed(1)}% &middot; readings as of ${body.as_of}</p>
         ${body.stale ? '<div class="stale-banner">Live EA data unavailable -- showing last known readings.</div>' : ""}
         <table>
-          <thead><tr><th>Factor</th><th>Value</th><th>SHAP contribution</th></tr></thead>
+          <thead><tr><th>Factor</th><th>Reading</th><th>Effect on risk</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
+        <p class="factors-note">Biggest drivers of this score, most important first.</p>
       `;
     }
 
