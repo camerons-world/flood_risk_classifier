@@ -28,6 +28,10 @@ touching test) comparing ~7 configs on validation cost; this one had the
 lowest. Diminishing returns set in quickly given only ~180 positive
 episodes total to learn from -- not worth chasing further.
 """
+import datetime as dt
+from pathlib import Path
+
+import joblib
 import pandas as pd
 from xgboost import XGBClassifier
 from sklearn.linear_model import LogisticRegression
@@ -35,7 +39,9 @@ from sklearn.metrics import average_precision_score, confusion_matrix, fbeta_sco
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from src.cost_threshold import expected_cost, select_threshold
+from src.cost_threshold import COST_FALSE_ALARM, COST_MISSED_WARNING, expected_cost, select_threshold
+
+MODEL_PATH = Path("models/model.joblib")
 
 TRAIN_CUTOFF = "2022-07-01"
 VAL_CUTOFF = "2024-07-01"
@@ -159,4 +165,23 @@ if __name__ == "__main__":
     )
     test_scored = _with_proba(main_model, test, MAIN_MODEL_FEATURE_COLUMNS)
     test_cost = expected_cost(test_scored, "proba", best_threshold)
+    test_pr_auc = average_precision_score(test[TARGET_COLUMN], test_scored["proba"])
     print(f"expected cost on test set at threshold {best_threshold:.3f}: GBP{test_cost:,.0f}")
+
+    MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+    bundle = {
+        "model": main_model,
+        "threshold": best_threshold,
+        "feature_columns": MAIN_MODEL_FEATURE_COLUMNS,
+        "station_categories": list(table["station_id"].cat.categories),
+        "metadata": {
+            "trained_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+            "train_window": f"{table['date_time'].min()} to {TRAIN_CUTOFF}",
+            "cost_missed_warning_gbp": COST_MISSED_WARNING,
+            "cost_false_alarm_gbp": COST_FALSE_ALARM,
+            "test_pr_auc": float(test_pr_auc),
+            "test_expected_cost_gbp": float(test_cost),
+        },
+    }
+    joblib.dump(bundle, MODEL_PATH)
+    print(f"saved model bundle -> {MODEL_PATH} ({MODEL_PATH.stat().st_size / 1e6:.2f} MB)")

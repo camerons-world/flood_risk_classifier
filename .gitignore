@@ -10,5 +10,3 @@ data/*
 !data/warnings_matched.csv
 *.env
 .env
-models/*.pkl
-models/*.joblib
