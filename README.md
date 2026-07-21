@@ -10,6 +10,12 @@ This project is a small-scale proof of concept for a live, granular complement t
 
 Full narrative of how this was built, including the decisions and dead ends along the way, is in [PLAN.md](PLAN.md).
 
+## Live demo
+
+**[flood-risk-classifier.onrender.com](https://flood-risk-classifier.onrender.com/)** -- login `demo` / `demo`.
+
+That login is a demo gate, not real access control -- the credentials are published here on purpose, since Render's free tier has no private-deployment option. It exists to keep the app off casual crawlers, not to hide it from anyone reading this README. Hosted on Render's free tier: spins down after 15 minutes idle, so the first request after a while takes about a minute to wake up.
+
 ## Quickstart
 
 ```bash
