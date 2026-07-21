@@ -1,3 +1,13 @@
+---
+title: UK Flood Risk Classifier
+emoji: 🌊
+colorFrom: blue
+colorTo: gray
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # UK Flood Risk Classifier
 
 A live risk-scoring API for Greater London river monitoring stations, framed as a short-term signal for insurance underwriting. Given a station, it fetches current Environment Agency readings, computes rainfall/level features on the fly, and returns a 24h flood-warning risk score with a cost-based decision flag and a SHAP explanation of what drove it.
