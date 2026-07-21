@@ -1,0 +1,12 @@
+flood_risk_venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+.DS_Store
+.git/
+data/raw/
+data/raw_warnings/
+data/processed/
+notebooks/
+tests/

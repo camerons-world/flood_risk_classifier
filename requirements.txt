@@ -4,7 +4,6 @@ requests
 scikit-learn
 xgboost
 shap
-shapely
 fastapi
 uvicorn[standard]
 pydantic
