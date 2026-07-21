@@ -1,13 +1,17 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException
 
 from app import model_wrapper
 
-app = FastAPI(title="UK Flood Risk Classifier")
 
-
-@app.on_event("startup")
-def _load_model():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     model_wrapper.load_model()
+    yield
+
+
+app = FastAPI(title="UK Flood Risk Classifier", lifespan=lifespan)
 
 
 @app.get("/health")

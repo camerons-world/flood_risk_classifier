@@ -1,0 +1,53 @@
+{
+  "@context": "http://environment.data.gov.uk/flood-monitoring/meta/context.jsonld",
+  "meta": {
+    "publisher": "Environment Agency",
+    "licence": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "documentation": "http://environment.data.gov.uk/flood-monitoring/doc/reference",
+    "version": "0.9",
+    "comment": "Status: Beta service",
+    "hasFormat": [
+      "http://environment.data.gov.uk/flood-monitoring/id/stations/247540TP.rdf",
+      "http://environment.data.gov.uk/flood-monitoring/id/stations/247540TP.ttl",
+      "http://environment.data.gov.uk/flood-monitoring/id/stations/247540TP.html"
+    ]
+  },
+  "items": {
+    "@id": "http://environment.data.gov.uk/flood-monitoring/id/stations/247540TP",
+    "eaRegionName": "Thames",
+    "easting": 507650,
+    "gridReference": "TQ076767",
+    "label": "Rainfall station",
+    "lat": 51.479469,
+    "long": -0.451216,
+    "measures": {
+      "@id": "http://environment.data.gov.uk/flood-monitoring/id/measures/247540TP-rainfall-tipping_bucket_raingauge-t-15_min-mm",
+      "label": "rainfall-tipping_bucket_raingauge-t-15_min-mm",
+      "latestReading": {
+        "@id": "http://environment.data.gov.uk/flood-monitoring/data/readings/247540TP-rainfall-tipping_bucket_raingauge-t-15_min-mm/2026-07-21T14-30-00Z",
+        "date": "2026-07-21",
+        "dateTime": "2026-07-21T14:30:00Z",
+        "measure": "http://environment.data.gov.uk/flood-monitoring/id/measures/247540TP-rainfall-tipping_bucket_raingauge-t-15_min-mm",
+        "value": 0.0
+      },
+      "notation": "247540TP-rainfall-tipping_bucket_raingauge-t-15_min-mm",
+      "parameter": "rainfall",
+      "parameterName": "Rainfall",
+      "period": 900,
+      "qualifier": "Tipping Bucket Raingauge",
+      "station": "http://environment.data.gov.uk/flood-monitoring/id/stations/247540TP",
+      "stationReference": "247540TP",
+      "type": [
+        "http://environment.data.gov.uk/flood-monitoring/def/core/Measure",
+        "http://environment.data.gov.uk/flood-monitoring/def/core/Rainfall"
+      ],
+      "unit": "http://qudt.org/1.1/vocab/unit#Millimeter",
+      "unitName": "mm",
+      "valueType": "total"
+    },
+    "northing": 176750,
+    "notation": "247540TP",
+    "stationReference": "247540TP",
+    "type": "http://environment.data.gov.uk/flood-monitoring/def/core/Station"
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "@context": "http://environment.data.gov.uk/flood-monitoring/meta/context.jsonld",
+  "meta": {
+    "publisher": "Environment Agency",
+    "licence": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "documentation": "http://environment.data.gov.uk/flood-monitoring/doc/reference",
+    "version": "0.9",
+    "comment": "Status: Beta service",
+    "hasFormat": [
+      "http://environment.data.gov.uk/flood-monitoring/id/stations/2893TH.rdf",
+      "http://environment.data.gov.uk/flood-monitoring/id/stations/2893TH.ttl",
+      "http://environment.data.gov.uk/flood-monitoring/id/stations/2893TH.html"
+    ]
+  },
+  "items": {
+    "@id": "http://environment.data.gov.uk/flood-monitoring/id/stations/2893TH",
+    "RLOIid": "7207",
+    "catchmentName": "Colne (Lower)",
+    "dateOpened": "1988-01-01",
+    "eaAreaName": "Thames - Hertfordshre and North London",
+    "eaRegionName": "Thames",
+    "easting": 504169,
+    "gridReference": "TQ0416975206",
+    "label": "Stanwell Mill",
+    "lat": 51.466242,
+    "long": -0.501779,
+    "measures": {
+      "@id": "http://environment.data.gov.uk/flood-monitoring/id/measures/2893TH-level-stage-i-15_min-mASD",
+      "datumType": "http://environment.data.gov.uk/flood-monitoring/def/core/datumASD",
+      "label": "River Colne at Stanwell - level-stage-i-15_min-mASD",
+      "latestReading": {
+        "@id": "http://environment.data.gov.uk/flood-monitoring/data/readings/2893TH-level-stage-i-15_min-mASD/2026-07-21T14-30-00Z",
+        "date": "2026-07-21",
+        "dateTime": "2026-07-21T14:30:00Z",
+        "measure": "http://environment.data.gov.uk/flood-monitoring/id/measures/2893TH-level-stage-i-15_min-mASD",
+        "value": 0.64
+      },
+      "notation": "2893TH-level-stage-i-15_min-mASD",
+      "parameter": "level",
+      "parameterName": "Water Level",
+      "period": 900,
+      "qualifier": "Stage",
+      "station": "http://environment.data.gov.uk/flood-monitoring/id/stations/2893TH",
+      "stationReference": "2893TH",
+      "type": [
+        "http://environment.data.gov.uk/flood-monitoring/def/core/Measure",
+        "http://environment.data.gov.uk/flood-monitoring/def/core/WaterLevel"
+      ],
+      "unit": "http://qudt.org/1.1/vocab/unit#Meter",
+      "unitName": "mASD",
+      "valueType": "instantaneous"
+    },
+    "northing": 175206,
+    "notation": "2893TH",
+    "riverName": "River Colne",
+    "stageScale": {
+      "@id": "http://environment.data.gov.uk/flood-monitoring/id/stations/2893TH/stageScale",
+      "datum": 20,
+      "highestRecent": {
+        "@id": "http://environment.data.gov.uk/flood-monitoring/id/stations/2893TH/stageScale/highestRecent",
+        "dateTime": "2012-04-29T20:15:00",
+        "value": 0.818
+      },
+      "maxOnRecord": {
+        "@id": "http://environment.data.gov.uk/flood-monitoring/id/stations/2893TH/stageScale/maxOnRecord",
+        "dateTime": "1989-12-23T04:30:00",
+        "value": 1.593
+      },
+      "minOnRecord": {
+        "@id": "http://environment.data.gov.uk/flood-monitoring/id/stations/2893TH/stageScale/minOnRecord",
+        "dateTime": "2005-07-05T14:00:00",
+        "value": 0.125
+      },
+      "scaleMax": 2,
+      "typicalRangeHigh": 1.12,
+      "typicalRangeLow": 0.21
+    },
+    "stationReference": "2893TH",
+    "status": "http://environment.data.gov.uk/flood-monitoring/def/core/statusActive",
+    "town": "Longford",
+    "type": [
+      "http://environment.data.gov.uk/flood-monitoring/def/core/SingleLevel",
+      "http://environment.data.gov.uk/flood-monitoring/def/core/Station"
+    ],
+    "wiskiID": "2893TH"
+  }
+}
