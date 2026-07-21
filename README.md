@@ -68,9 +68,17 @@ Feature set: started with 6 features (rate-of-rise 1h/6h, rainfall 6h/24h/72h, l
 - **Data quality**: recent months of training data carry an `Unchecked` QC flag rather than `Good` (the Environment Agency hasn't finished quality-checking them yet). Readings are still real and used as-is; this is an accepted simplification.
 - **Concept drift**: the model reflects historical patterns and won't anticipate infrastructure changes (new flood defences, culvert work) that change a catchment's real risk profile going forward.
 
+## Notebooks
+
+`notebooks/` has three, in reading order, each already executed with real output baked in so they're browsable without re-running anything:
+
+- `01_eda.ipynb` -- the 132 stations, matched flood warnings, and the assembled training table (class imbalance, seasonality, feature distributions).
+- `02_cost_matrix_analysis.ipynb` -- the cost values, why costing is per-episode rather than per-row, the false-alarm-costing loophole this caught, and the resulting expected-cost-vs-threshold curve.
+- `03_model_development.ipynb` -- baseline vs main model, ROC/PR curves, the feature-set iteration that moved test ROC-AUC from 0.797 to 0.855, and the SHAP summary plot.
+
 ## Stack
 
-pandas, requests, scikit-learn, XGBoost, SHAP, FastAPI, Docker, GitHub Actions, pytest, Hugging Face Spaces.
+pandas, requests, scikit-learn, XGBoost, SHAP, FastAPI, Docker, GitHub Actions, pytest, Hugging Face Spaces, Jupyter.
 
 ## Repo layout
 
