@@ -76,8 +76,8 @@ def predict(station_id: str) -> dict:
         raise ValueError(f"unknown station: {station_id}")
     station_row = state["stations"].loc[station_id]
 
-    level_readings = ea_client.get_recent_readings(station_id, station_row["parameter"])
-    rainfall_readings = ea_client.get_recent_readings(station_row["live_rainfall_station_id"], "rainfall")
+    level_readings, level_stale = ea_client.get_recent_readings(station_id, station_row["parameter"])
+    rainfall_readings, rainfall_stale = ea_client.get_recent_readings(station_row["live_rainfall_station_id"], "rainfall")
 
     row, latest_time = compute_features(station_id, level_readings, rainfall_readings)
     bundle = state["bundle"]
@@ -92,5 +92,6 @@ def predict(station_id: str) -> dict:
         "elevated_risk": bool(flagged),
         "threshold": bundle["threshold"],
         "as_of": latest_time.isoformat(),
+        "stale": level_stale or rainfall_stale,
         "explanation": explanation,
     }
