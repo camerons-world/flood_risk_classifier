@@ -39,7 +39,7 @@ from sklearn.metrics import average_precision_score, confusion_matrix, fbeta_sco
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from src.cost_threshold import COST_FALSE_ALARM, COST_MISSED_WARNING, expected_cost, select_threshold
+from src.cost_threshold import COST_FALSE_ALARM, COST_MISSED_WARNING, MIN_EPISODE_RECALL, evaluate_threshold, select_threshold
 
 MODEL_PATH = Path("models/model.joblib")
 
@@ -141,10 +141,15 @@ def _with_proba(model, split: pd.DataFrame, features: list[str]) -> pd.DataFrame
 
 
 def pick_operating_threshold(model, val: pd.DataFrame, features: list[str]) -> dict:
-    """Cost-optimal threshold, chosen on validation -- never on test."""
+    """Cheapest threshold with episode recall >= MIN_EPISODE_RECALL, chosen on
+    validation -- never on test. See cost_threshold.py for why this is
+    recall-constrained rather than pure cost minimization."""
     val_scored = _with_proba(model, val, features)
     result = select_threshold(val_scored, "proba")
-    print(f"cost-optimal threshold (validation): {result['best_threshold']:.3f}, expected cost GBP{result['expected_cost']:,.0f}")
+    print(
+        f"threshold (validation, min recall {MIN_EPISODE_RECALL:.0%}): {result['best_threshold']:.3f}, "
+        f"expected cost GBP{result['expected_cost']:,.0f}, episode recall {result['episode_recall']:.0%}"
+    )
     return result
 
 
@@ -165,12 +170,16 @@ if __name__ == "__main__":
 
     evaluate(
         main_model, test, MAIN_MODEL_FEATURE_COLUMNS, threshold=best_threshold,
-        label="main XGBoost model (TEST, cost-optimal threshold)",
+        label="main XGBoost model (TEST, recall-constrained threshold)",
     )
     test_scored = _with_proba(main_model, test, MAIN_MODEL_FEATURE_COLUMNS)
-    test_cost = expected_cost(test_scored, "proba", best_threshold)
+    test_result = evaluate_threshold(test_scored.sort_values(["station_id", "date_time"]), "proba", best_threshold)
+    test_cost = test_result["expected_cost"]
     test_pr_auc = average_precision_score(test[TARGET_COLUMN], test_scored["proba"])
-    print(f"expected cost on test set at threshold {best_threshold:.3f}: GBP{test_cost:,.0f}")
+    print(
+        f"test set at threshold {best_threshold:.3f}: expected cost GBP{test_cost:,.0f}, "
+        f"episodes caught {test_result['episodes_caught']}/{test_result['episodes_total']} ({test_result['episode_recall']:.0%})"
+    )
 
     MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     bundle = {
@@ -185,6 +194,8 @@ if __name__ == "__main__":
             "cost_false_alarm_gbp": COST_FALSE_ALARM,
             "test_pr_auc": float(test_pr_auc),
             "test_expected_cost_gbp": float(test_cost),
+            "test_episode_recall": test_result["episode_recall"],
+            "min_episode_recall_constraint": MIN_EPISODE_RECALL,
         },
     }
     joblib.dump(bundle, MODEL_PATH)

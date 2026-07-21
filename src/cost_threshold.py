@@ -26,6 +26,14 @@ Cost values (see README for the full writeup):
 - COST_FALSE_ALARM: no authoritative figure exists for this (it's internal
   ops cost, never published) -- GBP 100 is a stated assumption, roughly
   1-2 hours of an underwriting analyst reviewing a flagged station.
+
+Threshold selection: pure cost minimization picked a threshold that only
+caught ~27% of held-out flood episodes -- mathematically optimal given the
+cost values, but too conservative to be a useful underwriting signal in
+practice. MIN_EPISODE_RECALL reframes this as a constrained optimization
+(cheapest threshold that still catches at least half of all episodes), which
+is a common real-world framing -- insurers often carry a minimum-recall SLA
+alongside a cost target, not a pure cost objective.
 """
 import numpy as np
 import pandas as pd
@@ -33,6 +41,7 @@ import pandas as pd
 COST_MISSED_WARNING = 30_000
 COST_FALSE_ALARM = 100
 FALSE_ALARM_MAX_HOURS = 24
+MIN_EPISODE_RECALL = 0.5
 
 
 def _contiguous_run_ids(df: pd.DataFrame, flag_col: str, max_run_length: int | None = None) -> pd.Series:
@@ -51,7 +60,7 @@ def _contiguous_run_ids(df: pd.DataFrame, flag_col: str, max_run_length: int | N
     return run_id
 
 
-def expected_cost(df: pd.DataFrame, proba_col: str, threshold: float) -> float:
+def evaluate_threshold(df: pd.DataFrame, proba_col: str, threshold: float) -> dict:
     """df needs columns: station_id, date_time, label, and `proba_col`. Must already be
     sorted by (station_id, date_time) -- callers should sort once rather than per threshold."""
     df = df.copy()
@@ -60,20 +69,38 @@ def expected_cost(df: pd.DataFrame, proba_col: str, threshold: float) -> float:
     event_run_id = _contiguous_run_ids(df.assign(is_label=df["label"].astype(bool)), "is_label")
     event_flagged = df.loc[event_run_id.notna()].groupby(event_run_id[event_run_id.notna()])["flagged"].any()
     missed_event_count = (~event_flagged).sum()
+    episode_recall = float(event_flagged.mean()) if len(event_flagged) else float("nan")
 
     alarm_run_id = _contiguous_run_ids(df, "flagged", max_run_length=FALSE_ALARM_MAX_HOURS)
     alarm_has_true_positive = df.loc[alarm_run_id.notna()].groupby(alarm_run_id[alarm_run_id.notna()])["label"].max()
     false_alarm_count = (alarm_has_true_positive == 0).sum()
 
-    return missed_event_count * COST_MISSED_WARNING + false_alarm_count * COST_FALSE_ALARM
+    cost = missed_event_count * COST_MISSED_WARNING + false_alarm_count * COST_FALSE_ALARM
+    return {"expected_cost": cost, "episode_recall": episode_recall, "episodes_caught": int(event_flagged.sum()), "episodes_total": len(event_flagged)}
 
 
-def select_threshold(df: pd.DataFrame, proba_col: str, thresholds=None) -> dict:
+def expected_cost(df: pd.DataFrame, proba_col: str, threshold: float) -> float:
+    return evaluate_threshold(df, proba_col, threshold)["expected_cost"]
+
+
+def select_threshold(df: pd.DataFrame, proba_col: str, thresholds=None, min_episode_recall: float | None = MIN_EPISODE_RECALL) -> dict:
+    """Cheapest threshold with episode_recall >= min_episode_recall, if set;
+    otherwise pure cost minimization (min_episode_recall=None)."""
     df = df.sort_values(["station_id", "date_time"]).reset_index(drop=True)
     if thresholds is None:
         thresholds = np.linspace(0.01, 0.99, 99)
-    curve = pd.DataFrame(
-        {"threshold": t, "expected_cost": expected_cost(df, proba_col, t)} for t in thresholds
-    )
-    best = curve.loc[curve["expected_cost"].idxmin()]
-    return {"best_threshold": float(best["threshold"]), "expected_cost": float(best["expected_cost"]), "curve": curve}
+
+    rows = [{"threshold": t, **evaluate_threshold(df, proba_col, t)} for t in thresholds]
+    curve = pd.DataFrame(rows)
+
+    candidates = curve[curve["episode_recall"] >= min_episode_recall] if min_episode_recall else curve
+    if candidates.empty:
+        candidates = curve  # constraint unreachable at any threshold in range -- fall back to pure cost min
+
+    best = candidates.loc[candidates["expected_cost"].idxmin()]
+    return {
+        "best_threshold": float(best["threshold"]),
+        "expected_cost": float(best["expected_cost"]),
+        "episode_recall": float(best["episode_recall"]),
+        "curve": curve,
+    }
