@@ -70,6 +70,12 @@ def compute_features(station_id: str, level_readings: list[dict], rainfall_readi
     return row[state["bundle"]["feature_columns"]], latest_time
 
 
+def list_stations() -> list[dict]:
+    state = load_model()
+    stations = state["stations"].reset_index()[["station_id", "label", "catchment_name"]]
+    return stations.to_dict(orient="records")
+
+
 def predict(station_id: str) -> dict:
     state = load_model()
     if station_id not in state["stations"].index:
