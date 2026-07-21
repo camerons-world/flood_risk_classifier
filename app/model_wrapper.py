@@ -59,10 +59,14 @@ def compute_features(station_id: str, level_readings: list[dict], rainfall_readi
         {
             "rate_of_rise_1h": [features.rate_of_rise(level, hours=1).loc[latest_time]],
             "rate_of_rise_6h": [features.rate_of_rise(level, hours=6).loc[latest_time]],
+            "rate_of_rise_12h": [features.rate_of_rise(level, hours=12).loc[latest_time]],
             "rainfall_6h": [features.rolling_rainfall(rainfall, hours=6).loc[latest_time]],
             "rainfall_24h": [features.rolling_rainfall(rainfall, hours=24).loc[latest_time]],
             "rainfall_72h": [features.rolling_rainfall(rainfall, hours=72).loc[latest_time]],
+            "rainfall_7d": [features.rolling_rainfall(rainfall, hours=168).loc[latest_time]],
+            "rainfall_peak_intensity": [features.peak_rainfall_intensity(rainfall).loc[latest_time]],
             "level_minus_baseline": [level.loc[latest_time] - baseline],
+            "level_vs_24h_peak": [level.loc[latest_time] - features.rolling_max(level, hours=24).loc[latest_time]],
         }
     )
     row = row.join(features.seasonality(pd.DatetimeIndex([latest_time])).reset_index(drop=True))

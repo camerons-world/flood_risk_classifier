@@ -49,10 +49,14 @@ VAL_CUTOFF = "2024-07-01"
 BASELINE_FEATURE_COLUMNS = [
     "rate_of_rise_1h",
     "rate_of_rise_6h",
+    "rate_of_rise_12h",
     "rainfall_6h",
     "rainfall_24h",
     "rainfall_72h",
+    "rainfall_7d",
+    "rainfall_peak_intensity",
     "level_minus_baseline",
+    "level_vs_24h_peak",
     "season_sin",
     "season_cos",
 ]

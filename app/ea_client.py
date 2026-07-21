@@ -4,7 +4,7 @@ import requests
 
 BASE_URL = "https://environment.data.gov.uk/flood-monitoring"
 TIMEOUT_SECONDS = 15
-HISTORY_HOURS = 80  # >=72h rainfall window + 6h rate-of-rise + buffer for gaps
+HISTORY_HOURS = 180  # >=168h (7-day rainfall) window + buffer for gaps
 CACHE_TTL_SECONDS = 600  # readings update ~every 15 min; avoids hammering the EA API on repeat requests
 
 # (station_id, parameter) -> {"readings": [...], "fetched_at": datetime}

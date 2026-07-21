@@ -64,9 +64,13 @@ def build_station_table(row: pd.Series, warnings: pd.DataFrame) -> pd.DataFrame 
     df["value"] = level
     df["rate_of_rise_1h"] = features.rate_of_rise(level, hours=1)
     df["rate_of_rise_6h"] = features.rate_of_rise(level, hours=6)
+    df["rate_of_rise_12h"] = features.rate_of_rise(level, hours=12)
     df["rainfall_6h"] = features.rolling_rainfall(rainfall, hours=6)
     df["rainfall_24h"] = features.rolling_rainfall(rainfall, hours=24)
     df["rainfall_72h"] = features.rolling_rainfall(rainfall, hours=72)
+    df["rainfall_7d"] = features.rolling_rainfall(rainfall, hours=168)
+    df["rainfall_peak_intensity"] = features.peak_rainfall_intensity(rainfall, burst_hours=1, window_hours=6)
+    df["level_vs_24h_peak"] = df["value"] - features.rolling_max(level, hours=24)
     df["baseline"] = features.rolling_baseline(level)
     df["level_minus_baseline"] = df["value"] - df["baseline"]
     df = df.join(features.seasonality(df.index))
@@ -79,7 +83,7 @@ def build_station_table(row: pd.Series, warnings: pd.DataFrame) -> pd.DataFrame 
     df["station_id"] = row["station_id"]
     df["parameter"] = parameter
     df = df[df.index.minute == 0]  # downsample to hourly snapshots
-    df = df.dropna(subset=["baseline", "rate_of_rise_1h", "rate_of_rise_6h"])
+    df = df.dropna(subset=["baseline", "rate_of_rise_1h", "rate_of_rise_6h", "rate_of_rise_12h", "rainfall_7d", "level_vs_24h_peak"])
     return df.reset_index(names="date_time")
 
 

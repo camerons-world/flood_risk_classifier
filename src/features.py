@@ -20,6 +20,18 @@ def rolling_baseline(level_series: pd.Series, days: int = 90) -> pd.Series:
     return level_series.rolling(periods, min_periods=READINGS_PER_HOUR * 24).median()
 
 
+def rolling_max(series: pd.Series, hours: int) -> pd.Series:
+    periods = hours * READINGS_PER_HOUR
+    return series.rolling(periods, min_periods=1).max()
+
+
+def peak_rainfall_intensity(rainfall_series: pd.Series, burst_hours: int = 1, window_hours: int = 6) -> pd.Series:
+    """Max rainfall in any `burst_hours` window within the trailing `window_hours` --
+    distinguishes a short intense burst from the same total spread out gently."""
+    burst_totals = rolling_rainfall(rainfall_series, hours=burst_hours)
+    return rolling_max(burst_totals, hours=window_hours)
+
+
 def seasonality(datetime_index: pd.DatetimeIndex) -> pd.DataFrame:
     day_of_year = datetime_index.dayofyear
     angle = 2 * np.pi * day_of_year / 365.25
