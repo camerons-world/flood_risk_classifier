@@ -7,10 +7,10 @@ warning, useful for a "was this area at elevated risk" label). Deciding
 which severities count as the positive training label happens downstream,
 in train.py, using the WARNING_TYPES constant below.
 """
-import math
-
 import pandas as pd
 import requests
+
+from src.geo import haversine_km
 
 WARNINGS_ODS = "data/raw_warnings/flood_warnings_raw.ods"
 FLOOD_AREAS_URL = "https://environment.data.gov.uk/flood-monitoring/id/floodAreas"
@@ -46,21 +46,12 @@ def fetch_flood_areas() -> pd.DataFrame:
     )
 
 
-def _haversine_km(lat1, long1, lat2, long2):
-    r = 6371
-    p1, p2 = math.radians(lat1), math.radians(lat2)
-    dp = math.radians(lat2 - lat1)
-    dl = math.radians(long2 - long1)
-    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
-    return 2 * r * math.asin(math.sqrt(a))
-
-
 def _nearest_station_lookup(flood_areas: pd.DataFrame, stations: pd.DataFrame) -> pd.DataFrame:
     """One row per unique flood_area_code -- nearest station is fixed per area, not per event."""
     nearest_station_id = []
     nearest_km = []
     for _, row in flood_areas.iterrows():
-        dists = stations.apply(lambda s: _haversine_km(row["fa_lat"], row["fa_long"], s["lat"], s["long"]), axis=1)
+        dists = stations.apply(lambda s: haversine_km(row["fa_lat"], row["fa_long"], s["lat"], s["long"]), axis=1)
         idx = dists.idxmin()
         nearest_station_id.append(stations.loc[idx, "station_id"])
         nearest_km.append(dists.loc[idx])

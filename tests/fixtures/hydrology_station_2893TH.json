@@ -1,0 +1,90 @@
+{
+  "meta": {
+    "@id": "http://environment.data.gov.uk/hydrology/id/stations.json?wiskiID=2893TH",
+    "publisher": "Environment Agency",
+    "license": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "licenseName": "OGL 3",
+    "comment": "Hydrology API for sub-daily data",
+    "version": "2.1.1",
+    "hasFormat": [
+      "http://environment.data.gov.uk/hydrology/id/stations.html?wiskiID=2893TH",
+      "http://environment.data.gov.uk/hydrology/id/stations.csv?wiskiID=2893TH",
+      "http://environment.data.gov.uk/hydrology/id/stations.json?wiskiID=2893TH",
+      "http://environment.data.gov.uk/hydrology/id/stations.geojson?wiskiID=2893TH",
+      "http://environment.data.gov.uk/hydrology/id/stations.ttl?wiskiID=2893TH",
+      "http://environment.data.gov.uk/hydrology/id/stations.rdf?wiskiID=2893TH"
+    ],
+    "limit": 100
+  },
+  "items": [
+    {
+      "@id": "http://environment.data.gov.uk/hydrology/id/stations/6407a424-72d2-4a6d-9917-e2e5e76c5572",
+      "label": "Stanwell Mill",
+      "notation": "6407a424-72d2-4a6d-9917-e2e5e76c5572",
+      "easting": 504169,
+      "northing": 175206,
+      "lat": 51.466242,
+      "long": -0.501779,
+      "type": [
+        {
+          "@id": "http://environment.data.gov.uk/reference/def/core/SamplingLocation"
+        },
+        {
+          "@id": "http://environment.data.gov.uk/flood-monitoring/def/core/RiverStation"
+        },
+        {
+          "@id": "http://environment.data.gov.uk/flood-monitoring/def/core/RiverLevel"
+        },
+        {
+          "@id": "http://environment.data.gov.uk/flood-monitoring/def/core/Station"
+        }
+      ],
+      "riverName": "River Colne",
+      "stationGuid": "6407a424-72d2-4a6d-9917-e2e5e76c5572",
+      "stationReference": "2893TH",
+      "wiskiID": "2893TH",
+      "RLOIid": "7207",
+      "rloiStationLink": {
+        "@id": "https://check-for-flooding.service.gov.uk/station/7207"
+      },
+      "dateOpened": "1988-11-07",
+      "observedProperty": [
+        {
+          "@id": "http://environment.data.gov.uk/reference/def/op/waterLevel"
+        }
+      ],
+      "status": [
+        {
+          "@id": "http://environment.data.gov.uk/flood-monitoring/def/core/statusActive",
+          "label": "Active"
+        }
+      ],
+      "measures": [
+        {
+          "@id": "http://environment.data.gov.uk/hydrology/id/measures/6407a424-72d2-4a6d-9917-e2e5e76c5572-level-min-86400-m-qualified",
+          "parameter": "level",
+          "period": 86400,
+          "valueStatistic": {
+            "@id": "http://environment.data.gov.uk/reference/def/core/minimum"
+          }
+        },
+        {
+          "@id": "http://environment.data.gov.uk/hydrology/id/measures/6407a424-72d2-4a6d-9917-e2e5e76c5572-level-i-900-m-qualified",
+          "parameter": "level",
+          "period": 900,
+          "valueStatistic": {
+            "@id": "http://environment.data.gov.uk/reference/def/core/instantaneous"
+          }
+        },
+        {
+          "@id": "http://environment.data.gov.uk/hydrology/id/measures/6407a424-72d2-4a6d-9917-e2e5e76c5572-level-max-86400-m-qualified",
+          "parameter": "level",
+          "period": 86400,
+          "valueStatistic": {
+            "@id": "http://environment.data.gov.uk/reference/def/core/maximum"
+          }
+        }
+      ]
+    }
+  ]
+}

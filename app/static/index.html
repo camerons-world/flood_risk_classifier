@@ -15,15 +15,20 @@
   }
   h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
   p.subtitle { color: #767676; margin-top: 0; }
-  select, button {
+  select, button, input[type="text"], input[type="date"] {
     font-size: 1rem;
     padding: 0.5rem;
   }
-  select { width: 100%; margin-bottom: 0.75rem; }
+  select, input[type="text"] { width: 100%; box-sizing: border-box; }
+  .or-divider { text-align: center; color: #767676; font-size: 0.85rem; margin: 0.5rem 0; }
+  .field-row { display: flex; gap: 0.75rem; align-items: center; margin: 0.75rem 0; flex-wrap: wrap; }
+  .field-row label { font-size: 0.9rem; }
   button {
     cursor: pointer;
     padding: 0.5rem 1.25rem;
   }
+  .nearby-list { font-size: 0.85rem; color: #767676; margin-top: 0.5rem; }
+  .nearby-list ul { margin: 0.25rem 0 0; padding-left: 1.2rem; }
   #result { margin-top: 1.5rem; }
   .risk-badge {
     display: inline-block;
@@ -59,16 +64,36 @@
   <p class="subtitle">Live 24h flood-warning risk for Greater London monitoring stations.</p>
 
   <select id="station-select"><option>Loading stations...</option></select>
+  <p class="or-divider">or</p>
+  <input type="text" id="postcode-input" placeholder="Enter a UK postcode, e.g. SW1A 1AA">
+
+  <div class="field-row">
+    <label for="date-input">Check a past date (optional):</label>
+    <input type="date" id="date-input">
+  </div>
+
   <button id="check-btn" disabled>Check risk</button>
 
   <div id="result"></div>
 
   <script>
     const select = document.getElementById("station-select");
+    const postcodeInput = document.getElementById("postcode-input");
+    const dateInput = document.getElementById("date-input");
     const button = document.getElementById("check-btn");
     const result = document.getElementById("result");
     let lastResult = null;
     let technicalView = false;
+
+    // backtest date range: 2010-04-01 (first date with a full 90-day trailing
+    // window) through yesterday -- matches app/model_wrapper.py's BACKTEST_MIN_DATE
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    dateInput.min = "2010-04-01";
+    dateInput.max = yesterday.toISOString().slice(0, 10);
+
+    select.addEventListener("change", () => { if (select.value) postcodeInput.value = ""; });
+    postcodeInput.addEventListener("input", () => { if (postcodeInput.value) select.selectedIndex = -1; });
 
     async function loadStations() {
       const stations = await (await fetch("/stations")).json();
@@ -76,16 +101,27 @@
       select.innerHTML = stations
         .map(s => `<option value="${s.station_id}">${s.label} (${s.catchment_name})</option>`)
         .join("");
+      select.selectedIndex = -1;
       button.disabled = false;
     }
 
     async function checkRisk() {
+      const postcode = postcodeInput.value.trim();
       const stationId = select.value;
+      if (!postcode && !stationId) {
+        result.innerHTML = `<p class="error">Pick a station or enter a postcode.</p>`;
+        return;
+      }
+
+      const params = new URLSearchParams();
+      params.set(postcode ? "postcode" : "station_id", postcode || stationId);
+      if (dateInput.value) params.set("date", dateInput.value);
+
       button.disabled = true;
-      result.innerHTML = "<p class=\"muted\">Fetching live readings...</p>";
+      result.innerHTML = `<p class="muted">${dateInput.value ? "Fetching historical readings..." : "Fetching live readings..."}</p>`;
 
       try {
-        const response = await fetch(`/predict?station_id=${encodeURIComponent(stationId)}`);
+        const response = await fetch(`/predict?${params.toString()}`);
         const body = await response.json();
         if (!response.ok) {
           result.innerHTML = `<p class="error">${body.detail || "Request failed"}</p>`;
@@ -116,6 +152,20 @@
         .join("");
     }
 
+    function locationBlock(body) {
+      if (!body.resolved_station) return "";
+      const nearby = (body.nearby_stations || [])
+        .map(s => {
+          const risk = s.risk_score == null ? "unavailable" : `${(s.risk_score * 100).toFixed(1)}%${s.elevated_risk ? " (elevated)" : ""}`;
+          return `<li>${s.label} (${s.distance_km.toFixed(1)}km) -- ${risk}</li>`;
+        })
+        .join("");
+      return `
+        <p class="muted">Nearest station: ${body.resolved_station.label} (${body.resolved_station.distance_km.toFixed(1)}km away)</p>
+        ${nearby ? `<div class="nearby-list">Also nearby:<ul>${nearby}</ul></div>` : ""}
+      `;
+    }
+
     function render(body) {
       const pct = (body.risk_score * 100).toFixed(1);
       const badgeClass = body.elevated_risk ? "risk-elevated" : "risk-normal";
@@ -123,10 +173,14 @@
       const headerRow = technicalView
         ? "<tr><th>Feature</th><th>SHAP contribution</th></tr>"
         : "<tr><th>Factor</th><th>Reading</th><th>Effect on risk</th></tr>";
+      const isBacktest = body.mode === "backtest";
+      const asOfLabel = isBacktest ? `Historical risk as of ${body.as_of}` : `Readings as of ${body.as_of}`;
 
       result.innerHTML = `
+        ${isBacktest ? '<p class="muted"><strong>Historical backtest</strong> -- not a live reading or a forecast.</p>' : ""}
         <p><span class="risk-badge ${badgeClass}">${badgeText}</span> risk score: <strong>${pct}%</strong></p>
-        <p class="muted">Flags as elevated above ${(body.threshold * 100).toFixed(1)}% &middot; readings as of ${body.as_of}</p>
+        <p class="muted">Flags as elevated above ${(body.threshold * 100).toFixed(1)}% &middot; ${asOfLabel}</p>
+        ${locationBlock(body)}
         ${body.stale ? '<div class="stale-banner">Live EA data unavailable -- showing last known readings.</div>' : ""}
         <table>
           <thead>${headerRow}</thead>

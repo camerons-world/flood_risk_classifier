@@ -1,0 +1,73 @@
+{
+  "meta": {
+    "@id": "http://environment.data.gov.uk/hydrology/id/stations.json?wiskiID=310001TP",
+    "publisher": "Environment Agency",
+    "license": "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "licenseName": "OGL 3",
+    "comment": "Hydrology API for sub-daily data",
+    "version": "2.1.1",
+    "hasFormat": [
+      "http://environment.data.gov.uk/hydrology/id/stations.geojson?wiskiID=310001TP",
+      "http://environment.data.gov.uk/hydrology/id/stations.rdf?wiskiID=310001TP",
+      "http://environment.data.gov.uk/hydrology/id/stations.html?wiskiID=310001TP",
+      "http://environment.data.gov.uk/hydrology/id/stations.ttl?wiskiID=310001TP",
+      "http://environment.data.gov.uk/hydrology/id/stations.csv?wiskiID=310001TP",
+      "http://environment.data.gov.uk/hydrology/id/stations.json?wiskiID=310001TP"
+    ],
+    "limit": 100
+  },
+  "items": [
+    {
+      "@id": "http://environment.data.gov.uk/hydrology/id/stations/bdc4c2f3-8e01-4451-8608-8dd8a6f5c359",
+      "label": "Birch Green",
+      "notation": "bdc4c2f3-8e01-4451-8608-8dd8a6f5c359",
+      "easting": 504255,
+      "northing": 172000,
+      "lat": 51.437409,
+      "long": -0.501485,
+      "type": [
+        {
+          "@id": "http://environment.data.gov.uk/reference/def/core/SamplingLocation"
+        },
+        {
+          "@id": "http://environment.data.gov.uk/flood-monitoring/def/core/RainfallStation"
+        },
+        {
+          "@id": "http://environment.data.gov.uk/flood-monitoring/def/core/Station"
+        }
+      ],
+      "stationGuid": "bdc4c2f3-8e01-4451-8608-8dd8a6f5c359",
+      "wiskiID": "310001TP",
+      "dateOpened": "2019-03-21",
+      "observedProperty": [
+        {
+          "@id": "http://environment.data.gov.uk/reference/def/op/rainfall"
+        }
+      ],
+      "status": [
+        {
+          "@id": "http://environment.data.gov.uk/flood-monitoring/def/core/statusActive",
+          "label": "Active"
+        }
+      ],
+      "measures": [
+        {
+          "@id": "http://environment.data.gov.uk/hydrology/id/measures/bdc4c2f3-8e01-4451-8608-8dd8a6f5c359-rainfall-t-86400-mm-qualified",
+          "parameter": "rainfall",
+          "period": 86400,
+          "valueStatistic": {
+            "@id": "http://environment.data.gov.uk/reference/def/core/total"
+          }
+        },
+        {
+          "@id": "http://environment.data.gov.uk/hydrology/id/measures/bdc4c2f3-8e01-4451-8608-8dd8a6f5c359-rainfall-t-900-mm-qualified",
+          "parameter": "rainfall",
+          "period": 900,
+          "valueStatistic": {
+            "@id": "http://environment.data.gov.uk/reference/def/core/total"
+          }
+        }
+      ]
+    }
+  ]
+}

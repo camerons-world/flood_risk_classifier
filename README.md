@@ -1,6 +1,6 @@
 # UK Flood Risk Classifier
 
-A live risk-scoring API for Greater London river monitoring stations, framed as a short-term signal for insurance underwriting. Give it a station, and it fetches current Environment Agency readings, computes rainfall/level features on the fly, and returns a 24h flood-warning risk score with a cost-based decision flag and a SHAP explanation of what drove it.
+A live risk-scoring API for Greater London river monitoring stations, framed as a short-term signal for insurance underwriting. Give it a station -- or a postcode, resolved to the nearest one -- and it fetches current Environment Agency readings, computes rainfall/level features on the fly, and returns a 24h flood-warning risk score with a cost-based decision flag and a SHAP explanation of what drove it. You can also check a past date instead of "now," using real historical readings from that day.
 
 ## Why I built this
 
@@ -26,7 +26,10 @@ pytest
 uvicorn app.main:app --reload
 ```
 
-Then open `http://localhost:8000` for the frontend, or query the API directly: `GET /predict?station_id=2893TH`.
+Then open `http://localhost:8000` for the frontend, or query the API directly:
+- `GET /predict?station_id=2893TH` -- live risk for a known station
+- `GET /predict?postcode=SW1A+1AA` -- live risk for the nearest station to a UK postcode
+- `GET /predict?station_id=2893TH&date=2024-01-15` -- historical backtest instead of live (works with `postcode` too)
 
 ## Data
 
@@ -34,6 +37,8 @@ Then open `http://localhost:8000` for the frontend, or query the API directly: `
 - **Live inference**: [EA flood-monitoring API](https://environment.data.gov.uk/flood-monitoring/) -- the real-time telemetry network, updated roughly every 15 minutes, no API key required. Only serves ~29 days of history per station, which is enough for the rainfall/rate-of-rise features but not the 90-day baseline (see Limitations).
 - **Labels**: the EA's Historic Flood Warnings dataset (2006-present), matched to the nearest station by spatial join since warning areas don't carry a direct station ID.
 - **Station selection**: I picked 132 Greater London river-level stations, choosing ones where both APIs had matching, sufficiently deep coverage (about 88% of live stations matched on a broader sample).
+- **Postcode lookup**: [postcodes.io](https://postcodes.io) -- also free and keyless, resolves a UK postcode to lat/long, which I then match to the nearest station myself.
+- **Historical backtest**: reuses the EA Hydrology API above, queried live for a bounded window ending at whatever past date is requested -- not a separate data source, just a different use of the same one.
 
 ## Approach
 
@@ -43,6 +48,8 @@ Then open `http://localhost:8000` for the frontend, or query the API directly: `
 4. **Models**: a class-weighted logistic regression baseline, and a class-weighted XGBoost main model (adds `station_id` as a categorical feature -- I validated this as a real improvement for this deployment's scope, since the app only ever serves these same 132 known stations).
 5. **Cost-based threshold selection** -- the centerpiece of this project, not a generic classifier demo. See below.
 6. **Interpretability**: SHAP (`shap.TreeExplainer`), wired into the `/predict` response itself, not just computed offline -- and translated into plain language for a reader, not just raw feature codes.
+7. **Postcode lookup**: geocoded via [postcodes.io](https://postcodes.io) (free, keyless), then resolved to the nearest station by a plain distance scan over the 132 stations -- deliberately not H3-indexed or anything fancier, that's solving a problem I don't have at this scale. I show the nearest station's own prediction plus 2 more nearby stations individually, rather than averaging them into one blended number -- averaging could mask a real elevated-risk neighbour behind a calmer one, which cuts against the project's own cost matrix (missing a warning costs 300x more than a false alarm).
+8. **Historical backtest**: an optional `date` parameter that replaces live "now" data with real historical readings from the EA Hydrology API (the same deep-history API training used, still queried live at request time). I was explicit with myself about what this isn't: the model is a nowcast, not a forecaster, so it can't predict a *future* date -- there's no version of this that honestly answers "what will my risk be next winter." What it can honestly do is replay a real past day, which is what this does.
 
 ## Cost matrix
 
@@ -73,9 +80,11 @@ Feature set: I started with 6 features (rate-of-rise 1h/6h, rainfall 6h/24h/72h,
 - **Modest episode-level recall**: even at the recall-constrained threshold, catching half of flood episodes costs ~60% more in expectation than the pure cost-optimal policy. 24h-ahead flood prediction from local rainfall/level dynamics alone is a genuinely hard signal to extract without the numerical weather prediction and catchment hydrology models real EA/Met Office forecasts use. The model discriminates well in relative terms (ROC-AUC 0.855); recall above ~50% gets expensive fast.
 - **Event count is the real bottleneck, not features**: only ~180 distinct flood-warning episodes exist across the whole training set. I tried three additional feature-engineering directions and none improved on the current model -- consistent with the model being limited by how few independent labeled events exist, not by missing signal.
 - **Baseline isn't truly live**: the live flood-monitoring API only serves ~29 days of history per station, not the 90 days the baseline feature needs. `data/station_baselines.csv` is a periodically-refreshed static snapshot (`src/refresh_baselines.py`), not a live recompute -- I'm stating that plainly here rather than glossing over it.
-- **Rainfall gauge mismatch**: the rainfall gauge used at training time (nearest EA Hydrology station) is often not the same physical gauge available live (most Hydrology rainfall stations aren't in the live telemetry network). Live inference falls back to the nearest *live-queryable* rainfall station instead -- a reasonable proxy, but a genuine train/serve difference worth naming.
+- **Rainfall gauge mismatch (live path only)**: the rainfall gauge used at training time (nearest EA Hydrology station) is often not the same physical gauge available live (most Hydrology rainfall stations aren't in the live telemetry network). Live inference falls back to the nearest *live-queryable* rainfall station instead -- a reasonable proxy, but a genuine train/serve difference worth naming. The historical backtest path doesn't have this problem -- it queries the Hydrology API directly, so it uses the same gauge training did.
 - **Data quality**: recent months of training data carry an `Unchecked` QC flag rather than `Good` (the Environment Agency hasn't finished quality-checking them yet). I used the readings as-is; this is an accepted simplification.
 - **Concept drift**: the model reflects historical patterns and won't anticipate infrastructure changes (new flood defences, culvert work) that change a catchment's real risk profile going forward.
+- **Postcode coverage**: resolves to the nearest station within 15km; postcodes further out (most of the UK, since coverage is Greater-London-only) return a clear "no coverage" error rather than a distant, misleading match.
+- **Backtest date range**: 2010-04-01 to yesterday -- bounded by when the Hydrology API has a full 90-day trailing window to compute a baseline from, and by "yesterday" being the most recent day with a complete set of readings.
 
 ## Notebooks
 

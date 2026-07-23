@@ -1,3 +1,4 @@
+import datetime as dt
 import os
 import secrets
 from contextlib import asynccontextmanager
@@ -9,6 +10,7 @@ from fastapi.responses import FileResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from app import model_wrapper
+from app.model_wrapper import BACKTEST_MIN_DATE
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -49,9 +51,23 @@ def stations():
 
 
 @app.get("/predict", dependencies=[Depends(require_auth)])
-def predict(station_id: str):
+def predict(station_id: str | None = None, postcode: str | None = None, date: str | None = None):
+    if bool(station_id) == bool(postcode):
+        raise HTTPException(status_code=400, detail="provide exactly one of station_id or postcode")
+
+    parsed_date = None
+    if date is not None:
+        try:
+            parsed_date = dt.date.fromisoformat(date)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="date must be in YYYY-MM-DD format") from exc
+        if not (BACKTEST_MIN_DATE <= parsed_date < dt.date.today()):
+            raise HTTPException(
+                status_code=400, detail=f"date must be between {BACKTEST_MIN_DATE.isoformat()} and yesterday"
+            )
+
     try:
-        return model_wrapper.predict(station_id)
+        return model_wrapper.predict(station_id=station_id, postcode=postcode, date=parsed_date)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:

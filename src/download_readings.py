@@ -19,7 +19,7 @@ RAW_DIR = Path("data/raw")
 MAX_WORKERS = 8
 
 
-def _instantaneous_measure_id(measures: list[dict], parameter: str) -> str | None:
+def instantaneous_measure_id(measures: list[dict], parameter: str) -> str | None:
     # rainfall gauges report 900s totals ("-t-900-"), not instantaneous points
     infix = "-t-900-" if parameter == "rainfall" else "-i-900-"
     for m in measures:
@@ -39,9 +39,9 @@ def build_measure_lookup() -> dict:
         wiski_ids = wiski_ids if isinstance(wiski_ids, list) else [wiski_ids]
         measures = s.get("measures", [])
         entry = {
-            "level": _instantaneous_measure_id(measures, "level"),
-            "flow": _instantaneous_measure_id(measures, "flow"),
-            "rainfall": _instantaneous_measure_id(measures, "rainfall"),
+            "level": instantaneous_measure_id(measures, "level"),
+            "flow": instantaneous_measure_id(measures, "flow"),
+            "rainfall": instantaneous_measure_id(measures, "rainfall"),
         }
         for wiski_id in wiski_ids:
             if wiski_id:
