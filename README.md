@@ -8,8 +8,6 @@ UK flood risk is the reason [Flood Re](https://www.floodre.co.uk/) exists -- the
 
 It's not a production system -- 132 monitored stations across Greater London, not every postcode. The point is to demonstrate the *pattern* a production version would need, not to claim insurers should deploy this tomorrow.
 
-Full narrative of how this was built, decisions and dead ends included, is in [PLAN.md](PLAN.md).
-
 ## Live demo
 
 **[flood-risk-classifier.onrender.com](https://flood-risk-classifier.onrender.com/)** -- login `demo` / `demo`.
@@ -43,10 +41,10 @@ I picked 132 Greater London stations myself, keeping only ones where both APIs h
 2. **Target**: binary -- a Flood Warning or Severe Flood Warning within the next 24h for that station.
 3. **Split**: time-based only. Train < 2022-07, validate 2022-07 to 2024-07 (picks the threshold), test from 2024-07 (touched once). I set the cutoffs by checking how many flood episodes fell in each window, not by round fractions -- episodes are lumpy year to year.
 4. **Models**: class-weighted logistic regression as a baseline, class-weighted XGBoost as the real one. XGBoost gets `station_id` as a feature too -- a genuine improvement here, since the app only ever serves these same 132 stations.
-5. **Cost-based threshold selection** -- the actual point of this project. £30,000 per missed warning (sourced from the ABI's average UK flood claim), £100 per false alarm (my own assumption, nothing public exists for this), both charged per episode rather than per row. Picked to hit 50% recall on validation rather than just minimizing cost outright -- full reasoning in `PLAN.md`.
+5. **Cost-based threshold selection** -- the actual point of this project. £30,000 per missed warning (sourced from the ABI's average UK flood claim), £100 per false alarm (my own assumption, nothing public exists for this), both charged per episode rather than per row. Picked to hit 50% recall on validation rather than just minimizing cost outright.
 6. **Interpretability**: SHAP, wired into the response itself and translated into plain language, not raw feature codes.
-7. **Postcode lookup**: resolves to the nearest station, plus 2 more nearby shown individually rather than averaged. Reasoning (why not H3, why not average) is in `PLAN.md`.
-8. **Historical backtest**: an optional `date` param replaces live data with real historical readings -- deliberately not a forecast. Why, in `PLAN.md`.
+7. **Postcode lookup**: resolves to the nearest station, plus 2 more nearby shown individually rather than averaged -- no H3 (unnecessary at 132 stations), no averaging across neighbours (could mask a genuinely risky one).
+8. **Historical backtest**: an optional `date` param replaces live data with real historical readings -- deliberately not a forecast, since the model has no mechanism to predict future weather.
 
 ## Results
 
@@ -66,7 +64,3 @@ I picked 132 Greater London stations myself, keeping only ones where both APIs h
 - **Recent data is `Unchecked`, not `Good`**: the EA hasn't finished QC on the last few months. I use it as-is.
 - **Concept drift**: new flood defences or drainage work will make this stale in ways it can't detect.
 - **Postcode/date bounds**: postcodes past 15km from any station get a clear "no coverage," not a misleading distant match. Backtests run 2010-04-01 to yesterday, bounded by baseline history and data completeness.
-
-## Repo layout
-
-Full file tree and every decision behind it is in [PLAN.md](PLAN.md) -- dead ends included.

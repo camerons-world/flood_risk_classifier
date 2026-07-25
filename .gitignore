@@ -11,3 +11,4 @@ data/*
 !data/station_baselines.csv
 *.env
 .env
+PLAN.md
