@@ -1,12 +1,12 @@
 # UK Flood Risk Classifier
 
-A live risk-scoring API for Greater London river monitoring stations, framed as a short-term signal for insurance underwriting. Give it a station -- or a postcode, resolved to the nearest one -- and it fetches current Environment Agency readings, computes rainfall/level features on the fly, and returns a 24h flood-warning risk score with a cost-based decision flag and a SHAP explanation of what drove it. You can also check a past date instead of "now," using real historical readings from that day.
+A live risk-scoring API for Greater London river monitoring stations, letting a homeowner or buyer check dynamic, short-term flood risk for a property instead of relying on a static risk band. Give it a station -- or a postcode, resolved to the nearest one -- and it fetches current Environment Agency readings, computes rainfall/level features on the fly, and returns a 24h flood-warning risk score with a cost-based decision flag and a SHAP explanation of what drove it. You can also check a past date instead of "now," using real historical readings from that day.
 
 ## Why I built this
 
-UK flood risk is the reason [Flood Re](https://www.floodre.co.uk/) exists -- the government-backed reinsurance scheme for high flood-risk homes the standard market can't price well. Underwriting still leans on static risk bands that update infrequently and miss short-term dynamics: a "Medium risk" postcode in a dry spell is a different real risk after 72 hours of rain. I built this as a proof of concept for the missing live signal -- "conditions right now suggest this area's risk is elevated above its baseline."
+UK flood risk is usually communicated through static risk bands -- the kind behind [Flood Re](https://www.floodre.co.uk/), the government-backed reinsurance scheme for high flood-risk homes the standard market can't price well -- that update infrequently and miss short-term dynamics: a "Medium risk" postcode in a dry spell is a different real risk after 72 hours of rain. I built this so someone checking a property, whether they already live there or are looking at it for a mortgage, can see that dynamic picture directly -- "conditions right now suggest this area's risk is elevated above its baseline" -- rather than just the static band.
 
-It's not a production system -- 132 monitored stations across Greater London, not every postcode. The point is to demonstrate the *pattern* a production version would need, not to claim insurers should deploy this tomorrow.
+It's not a production system -- 132 monitored stations across Greater London, not every postcode. The point is to demonstrate the *pattern* a production version would need, not to claim this is ready to inform a real mortgage or insurance decision tomorrow.
 
 ## Live demo
 
