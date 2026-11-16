@@ -165,3 +165,26 @@ def test_predict_date_out_of_range_returns_400():
 def test_predict_bad_date_format_returns_400():
     response = client.get("/predict", params={"station_id": STATION_ID, "date": "not-a-date"})
     assert response.status_code == 400
+
+
+def test_predict_postcode_service_500_returns_503_mentioning_postcode(requests_mock):
+    requests_mock.get("https://api.postcodes.io/postcodes/SW1A1AA", status_code=500)
+    response = client.get("/predict", params={"postcode": "SW1A1AA"})
+    assert response.status_code == 503
+    assert "postcode" in response.json()["detail"].lower()
+    assert "EA" not in response.json()["detail"]
+    assert response.headers["Retry-After"]
+
+
+def test_predict_postcode_service_timeout_returns_503_mentioning_postcode(requests_mock):
+    requests_mock.get("https://api.postcodes.io/postcodes/SW1A1AA", exc=requests.exceptions.ConnectTimeout)
+    response = client.get("/predict", params={"postcode": "SW1A1AA"})
+    assert response.status_code == 503
+    assert "postcode" in response.json()["detail"].lower()
+    assert "EA" not in response.json()["detail"]
+
+
+def test_predict_unknown_postcode_still_returns_404(requests_mock):
+    requests_mock.get("https://api.postcodes.io/postcodes/ZZ99ZZ", status_code=404)
+    response = client.get("/predict", params={"postcode": "ZZ99ZZ"})
+    assert response.status_code == 404
