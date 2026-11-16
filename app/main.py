@@ -10,8 +10,12 @@ from fastapi.responses import FileResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from app import model_wrapper
+from app.postcode_client import PostcodeLookupError
 from app.model_wrapper import BACKTEST_MIN_DATE
 
+# Seconds clients are told to wait before retrying after a postcode-service
+# failure (sent as the Retry-After header). Override with the env var.
+POSTCODE_RETRY_AFTER_SECONDS = int(os.environ.get("POSTCODE_RETRY_AFTER_SECONDS", "30"))
 STATIC_DIR = Path(__file__).parent / "static"
 
 # Demo login only, not real access control -- credentials are published in
@@ -70,6 +74,12 @@ def predict(station_id: str | None = None, postcode: str | None = None, date: st
         return model_wrapper.predict(station_id=station_id, postcode=postcode, date=parsed_date)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PostcodeLookupError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Postcode lookup service unavailable, please try again shortly or pick a station instead",
+            headers={"Retry-After": str(POSTCODE_RETRY_AFTER_SECONDS)},
+        ) from exc
     except Exception as exc:
         raise HTTPException(status_code=502, detail="EA API unavailable") from exc
 
