@@ -13,7 +13,9 @@ from app import model_wrapper
 from app.postcode_client import PostcodeLookupError
 from app.model_wrapper import BACKTEST_MIN_DATE
 
-POSTCODE_RETRY_AFTER_SECONDS = 30
+# Seconds clients are told to wait before retrying after a postcode-service
+# failure (sent as the Retry-After header). Override with the env var.
+POSTCODE_RETRY_AFTER_SECONDS = int(os.environ.get("POSTCODE_RETRY_AFTER_SECONDS", "30"))
 STATIC_DIR = Path(__file__).parent / "static"
 
 # Demo login only, not real access control -- credentials are published in

@@ -188,3 +188,11 @@ def test_predict_unknown_postcode_still_returns_404(requests_mock):
     requests_mock.get("https://api.postcodes.io/postcodes/ZZ99ZZ", status_code=404)
     response = client.get("/predict", params={"postcode": "ZZ99ZZ"})
     assert response.status_code == 404
+
+
+def test_predict_postcode_failure_retry_after_uses_setting(requests_mock, monkeypatch):
+    monkeypatch.setattr("app.main.POSTCODE_RETRY_AFTER_SECONDS", 90)
+    requests_mock.get("https://api.postcodes.io/postcodes/SW1A1AA", status_code=500)
+    response = client.get("/predict", params={"postcode": "SW1A1AA"})
+    assert response.status_code == 503
+    assert response.headers["Retry-After"] == "90"
