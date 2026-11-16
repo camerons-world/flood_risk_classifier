@@ -2,7 +2,7 @@
 pytest
 httpx
 requests-mock
-ruff
+ruff==0.15.22
 jupyter
 nbformat
 matplotlib
